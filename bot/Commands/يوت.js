@@ -2,22 +2,43 @@ const { exec } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
-// yt-dlp يأتي مع الحزمة تلقائياً عند التثبيت، فلا يحتاج تثبيت يدوي على Railway.
+// yt-dlp و ffmpeg يأتيان مع الحزم تلقائياً عند التثبيت على Railway،
+// ولا يحتاج أي تثبيت يدوي لأدوات النظام.
 const ytdlConstants = require('youtube-dl-exec').constants;
 const YTDL_PATH = process.env.YTDL_PATH || ytdlConstants.YOUTUBE_DL_PATH;
-const DENO_PATH = process.env.DENO_BIN || 'deno';
+const FFMPEG_PATH = require('@ffmpeg-installer/ffmpeg').path;
+const FFMPEG_DIR = path.dirname(FFMPEG_PATH);
 const YOUTUBE_STATE_PATH = path.join(__dirname, '..', 'data', 'youtube-state.json');
+
+// ffprobe يأتي في مجلد منفصل، و yt-dlp يبحث عنه بجانب ffmpeg،
+// لذلك ننسخه مرة واحدة ليجده.
+function ensureFfprobe() {
+  const target = path.join(FFMPEG_DIR, 'ffprobe');
+  if (fs.existsSync(target)) return;
+  try {
+    const platformPkg = `${process.platform}-${process.arch}`;
+    const source = path.join(__dirname, '..', 'node_modules', '@ffprobe-installer', platformPkg, 'ffprobe');
+    if (!fs.existsSync(source)) return;
+    fs.copyFileSync(source, target);
+    fs.chmodSync(target, 0o755);
+  } catch (e) {
+    console.error('[يوت] تعذر تجهيز ffprobe:', e.message);
+  }
+}
 
 function downloadAudio(query, outFile) {
   return new Promise((resolve, reject) => {
     const safeQuery = query.replace(/"/g, '\\"').replace(/`/g, '');
 
-    // yt-dlp يحتاج Deno للحماية الجديدة من يوتيوب، مع الرجوع لاستخدام Node
-    // الموجود دائماً في Railway إذا لم يتوفر Deno.
-    const cmd = `"${YTDL_PATH}" --js-runtimes "deno:${DENO_PATH}" --js-runtimes node --remote-components ejs:github "ytsearch1:${safeQuery}" -x --audio-format mp3 --audio-quality 0 --no-playlist -o "${outFile}"`;
+    // Node يُستخدم كبيئة جافاسكربت لأنه موجود دائماً في Railway
+    // (Deno غير متوفر هناك).
+    const cmd = `"${YTDL_PATH}" --ffmpeg-location "${FFMPEG_PATH}" --js-runtimes node --remote-components ejs:github "ytsearch1:${safeQuery}" -x --audio-format mp3 --audio-quality 0 --no-playlist -o "${outFile}"`;
     console.log(`[يوت] تنفيذ: ${cmd}`);
 
-    exec(cmd, { timeout: 150000 }, (err, stdout, stderr) => {
+    exec(cmd, {
+      timeout: 150000,
+      env: { ...process.env, PATH: `${FFMPEG_DIR}:${process.env.PATH}` },
+    }, (err, stdout, stderr) => {
       if (fs.existsSync(outFile) && fs.statSync(outFile).size > 0) {
         resolve();
       } else if (err) {
@@ -149,6 +170,7 @@ function createYoutubeCommand({
 
       try {
         fs.mkdirSync(tmpDir, { recursive: true });
+        ensureFfprobe();
       } catch (e) {}
 
       try {
