@@ -2,8 +2,9 @@ const { exec } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
-// استخدام أدوات النظام المثبتة في بيئة التشغيل.
-const YTDL_PATH = 'yt-dlp';
+// yt-dlp يأتي مع الحزمة تلقائياً عند التثبيت، فلا يحتاج تثبيت يدوي على Railway.
+const ytdlConstants = require('youtube-dl-exec').constants;
+const YTDL_PATH = process.env.YTDL_PATH || ytdlConstants.YOUTUBE_DL_PATH;
 const DENO_PATH = process.env.DENO_BIN || 'deno';
 const YOUTUBE_STATE_PATH = path.join(__dirname, '..', 'data', 'youtube-state.json');
 
@@ -11,8 +12,9 @@ function downloadAudio(query, outFile) {
   return new Promise((resolve, reject) => {
     const safeQuery = query.replace(/"/g, '\\"').replace(/`/g, '');
 
-    // استخدام Deno كـ JavaScript runtime لمساعدة yt-dlp مع YouTube
-    const cmd = `"${YTDL_PATH}" --js-runtimes "deno:${DENO_PATH}" --remote-components ejs:github --extractor-args "youtube:player_client=web_embedded" "ytsearch1:${safeQuery}" -x --audio-format mp3 --audio-quality 0 --no-playlist -o "${outFile}"`;
+    // yt-dlp يحتاج Deno للحماية الجديدة من يوتيوب، مع الرجوع لاستخدام Node
+    // الموجود دائماً في Railway إذا لم يتوفر Deno.
+    const cmd = `"${YTDL_PATH}" --js-runtimes "deno:${DENO_PATH}" --js-runtimes node --remote-components ejs:github "ytsearch1:${safeQuery}" -x --audio-format mp3 --audio-quality 0 --no-playlist -o "${outFile}"`;
     console.log(`[يوت] تنفيذ: ${cmd}`);
 
     exec(cmd, { timeout: 150000 }, (err, stdout, stderr) => {
