@@ -209,6 +209,30 @@
   </section>
 
   <section class="panel">
+    <h2>👑 إعدادات البوت</h2>
+    <form id="settingsForm">
+      <div class="row">
+        <div class="field">
+          <label>معرّف الأدمن (يمكن وضع أكثر من معرّف مفصولة بفاصلة)</label>
+          <input type="text" id="setAdmins" dir="ltr" placeholder="100078389536244">
+        </div>
+      </div>
+      <div class="row">
+        <div class="field" style="flex:2">
+          <label>كنية البوت</label>
+          <input type="text" id="setNickname" placeholder="⋯⌁⟖ 𝒁𝑬𝑫 ...">
+        </div>
+      </div>
+      <div style="margin-top:14px;display:flex;gap:10px;align-items:center">
+        <button class="btn gold" type="submit">حفظ الإعدادات</button>
+        <span id="setMsg" class="okmsg" style="min-height:0"></span>
+        <span id="setError" class="err" style="min-height:0"></span>
+      </div>
+      <div class="hint">الكلمة الجديدة تُستخدم عند تعيين كنية البوت في المجموعات. معرّف الأدمن يتحكم بمن يستطيع إرسال الأوامر.</div>
+    </form>
+  </section>
+
+  <section class="panel">
     <h2>➕ إضافة حساب جديد</h2>
     <form id="addForm">
       <div class="row">
@@ -367,10 +391,41 @@
     $("loginView").classList.remove("hidden");
     $("dashView").classList.add("hidden");
   }
+  function loadSettings(){
+    return api("/admin/cookies/api/settings").then(function(r){
+      if (r.status === 401) { showLogin(); return; }
+      var d = r.data || {};
+      $("setAdmins").value = (d.admins || []).join(", ");
+      $("setNickname").value = d.botNickname || "";
+    }).catch(function(){ /* settings optional */ });
+  }
+
+  $("settingsForm").addEventListener("submit", function(e){
+    e.preventDefault();
+    $("setError").textContent = ""; $("setMsg").textContent = "";
+    var payload = {
+      admins: $("setAdmins").value,
+      botNickname: $("setNickname").value
+    };
+    api("/admin/cookies/api/settings", { method:"PUT", body: JSON.stringify(payload) })
+      .then(function(r){
+        if (r.status === 200){
+          $("setMsg").textContent = "تم حفظ الإعدادات";
+          toast("تم حفظ إعدادات البوت", "ok");
+          loadSettings();
+        } else {
+          var map = { invalid_admins:"معرّف الأدمن غير صالح", invalid_nickname:"الكنية لا يمكن أن تكون فارغة" };
+          $("setError").textContent = map[r.data && r.data.error] || "فشل الحفظ";
+        }
+      })
+      .catch(function(){ $("setError").textContent = "تعذر الاتصال بالخدمة"; });
+  });
+
   function showDash(){
     $("loginView").classList.add("hidden");
     $("dashView").classList.remove("hidden");
     load();
+    loadSettings();
   }
 
   $("loginForm").addEventListener("submit", function(e){

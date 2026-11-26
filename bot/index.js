@@ -1,6 +1,6 @@
 const path = require("path");
 const { login } = require("ws3-fca");
-const { createCommandContext, loadCommands, handleMessage, handleEvent, commands } = require("./main");
+const { createCommandContext, loadCommands, handleMessage, handleEvent, commands, settingsStore } = require("./main");
 const { loadConfig, ConfigError } = require("./config");
 const { createLogger } = require("./logger");
 const { acquireLock } = require("./process-lock");
@@ -378,6 +378,7 @@ function startMultiAccountEngine() {
       engine: accountsEngine,
       store: accountsStore,
       log,
+      settings: settingsStore,
     });
     return true;
   } catch (error) {

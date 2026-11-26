@@ -1,4 +1,7 @@
-const { getSharedNewspaperStore } = require("../newspaper-store");
+const {
+  getSharedNewspaperStore,
+  getBotNewspaperStore,
+} = require("../newspaper-store");
 const timingStore = require("../timing-store");
 
 const SPAM_START = `🇦🇱 𝆺𝅥⃝𝗕𝗢𝗥𝗡 𝗧𝗢 𝗥𝗨𝗟𝗘 ༐ ୨ৎ⃝ ˖ 🇦🇱 𝆺𝅥⃝𝗭𝗘𝗗 ┊ 𝗕𝗘𝗬𝗢𝗡𝗗 𝗟𝑰𝑴𝑰𝑻𝑺 ┊
@@ -66,21 +69,43 @@ function getDefaultTextForCycle(index) {
 
 const newspaperStore = getSharedNewspaperStore();
 
-function createNewspaperTextProvider(store) {
+function createNewspaperTextProvider(store, botID) {
+  const perBotStore = botID ? getBotNewspaperStore(botID) : null;
   return {
     get(index) {
+      if (perBotStore) {
+        const own = perBotStore.get();
+        if (own) return own;
+      }
       return store.get() ?? getDefaultTextForCycle(index);
     },
     setNewspaperText(text) {
-      return store.set(text);
+      return (perBotStore || store).set(text);
     },
   };
 }
 
+// Default provider without a bot ID → shared newspaper for all bots.
 const newspaperTextProvider = createNewspaperTextProvider(newspaperStore);
+
+// Providers keyed by bot ID so each account can have its own newspaper text.
+const perBotProviders = new Map();
+
+function getProviderForBot(botID) {
+  const key = String(botID || "").trim();
+  if (!key || !/^\d+$/.test(key)) return newspaperTextProvider;
+  if (!perBotProviders.has(key)) {
+    perBotProviders.set(key, createNewspaperTextProvider(newspaperStore, key));
+  }
+  return perBotProviders.get(key);
+}
 
 function getTextForCycle(index) {
   return newspaperTextProvider.get(index);
+}
+
+function getTextForBot(botID, index) {
+  return getProviderForBot(botID).get(index);
 }
 
 const activeLoops = new Map();
@@ -127,6 +152,9 @@ async function sendTyping(api, threadID, isTyping) {
 
 async function spamLoop(api, threadID) {
   let cycleIndex = 0;
+  const botID = api && typeof api.getCurrentUserID === "function"
+    ? String(api.getCurrentUserID() || "")
+    : null;
   while (activeLoops.get(threadID)) {
     try {
       const delay = getDelayForCycle(cycleIndex);
@@ -137,7 +165,7 @@ async function spamLoop(api, threadID) {
       await sleep(typingTime);
       await sendTyping(api, threadID, false);
 
-      const text = getTextForCycle(cycleIndex);
+      const text = botID ? getTextForBot(botID, cycleIndex) : getTextForCycle(cycleIndex);
       await api.sendMessage(text, threadID);
       console.log(
         `[قصف] ✍️ جريدة #${cycleIndex + 1} (كتابة ${(typingTime / 1000).toFixed(1)}ث) | تأخير ${(delay / 1000).toFixed(0)}ث`,
@@ -164,6 +192,10 @@ module.exports = {
 
   setNewspaperText(text) {
     return newspaperTextProvider.setNewspaperText(text);
+  },
+
+  setNewspaperTextForBot(botID, text) {
+    return getProviderForBot(botID).setNewspaperText(text);
   },
 
   async execute(api, event) {
@@ -205,6 +237,10 @@ module.exports = {
 
   getNewspaperText(index) {
     return getTextForCycle(index);
+  },
+
+  getNewspaperTextForBot(botID, index) {
+    return getProviderForBot(botID).get(index);
   },
 
   getStartMessage() {

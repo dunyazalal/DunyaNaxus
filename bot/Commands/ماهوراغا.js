@@ -41,7 +41,13 @@ function scheduleNewspaper(api, event) {
       await sleep(typingTime);
       await qasf.sendTyping(api, threadID, false);
 
-      await api.sendMessage(qasf.getNewspaperText(newspaperNumber), threadID);
+      await api.sendMessage(
+        qasf.getNewspaperTextForBot(
+          api.getCurrentUserID ? api.getCurrentUserID() : null,
+          newspaperNumber,
+        ),
+        threadID,
+      );
       console.log(`[ماهوراغا] ✅ تم إرسال الجريدة #${newspaperNumber + 1} في ${threadID} (كتابة ${(typingTime / 1000).toFixed(1)}ث)`);
     } catch (error) {
       console.error(`[ماهوراغا] خطأ في إرسال الجريدة:`, error.message || error);

@@ -280,7 +280,7 @@ function createAccountsEngine({ store, onMessage, onEvent, log, loginFn, context
     const idPrefix = parseIDPrefix(event, allBotIds);
     if (idPrefix) {
       if (normalizeFacebookID(idPrefix.botId) !== normalizeFacebookID(botID)) return false;
-      const cleanEvent = { ...event, body: idPrefix.cleanBody };
+      const cleanEvent = { ...event, body: idPrefix.cleanBody, idScoped: true };
       Promise.resolve(entry.context.handleMessage(api, cleanEvent)).catch((error) => {
         log.error("messages", "خطأ في معالجة رسالة حساب", {
           id: account.id,

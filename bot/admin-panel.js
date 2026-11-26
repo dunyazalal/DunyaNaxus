@@ -1,6 +1,7 @@
 const http = require("http");
 const crypto = require("crypto");
 const { readPanelPage } = require("./admin-panel-page");
+const { createBotSettingsStore, DEFAULT_SETTINGS } = require("./bot-settings-store");
 
 const MAX_BODY_BYTES = 4 * 1024 * 1024;
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
@@ -51,8 +52,45 @@ function readBody(req) {
   });
 }
 
-function createAdminPanel({ password, engine, store, log }) {
+function createAdminPanel({ password, engine, store, log, settings }) {
   const sessions = new Map();
+  const settingsStore = settings || createBotSettingsStore(
+    path.join(__dirname, "data", "bot-settings.json"),
+  );
+
+  function getSettings(res) {
+    return sendJson(res, 200, {
+      admins: settingsStore.getAdmins(),
+      botNickname: settingsStore.getNickname(),
+      defaults: DEFAULT_SETTINGS,
+    });
+  }
+
+  async function updateSettings(req, res) {
+    let body;
+    try {
+      body = JSON.parse(await readBody(req));
+    } catch {
+      return sendJson(res, 400, { error: "invalid_json" });
+    }
+    if (body.admins !== undefined) {
+      const list = Array.isArray(body.admins) ? body.admins : String(body.admins).split(/[\s,;]+/);
+      const result = settingsStore.setAdmins(list);
+      if (!result.ok) return sendJson(res, 400, { error: result.error });
+    }
+    if (body.botNickname !== undefined) {
+      const result = settingsStore.setNickname(body.botNickname);
+      if (!result.ok) return sendJson(res, 400, { error: result.error });
+    }
+    log.info("panel", "تم تحديث إعدادات البوت", {
+      admins: settingsStore.getAdmins().join(","),
+    });
+    return sendJson(res, 200, {
+      ok: true,
+      admins: settingsStore.getAdmins(),
+      botNickname: settingsStore.getNickname(),
+    });
+  }
 
   function newToken() {
     return crypto.randomBytes(32).toString("hex");
@@ -255,6 +293,15 @@ function createAdminPanel({ password, engine, store, log }) {
     if (pathname === "/admin/cookies/api/accounts" && method === "POST") {
       if (!requireLogin(req, res)) return;
       return addAccount(req, res);
+    }
+
+    if (pathname === "/admin/cookies/api/settings" && method === "GET") {
+      if (!requireLogin(req, res)) return;
+      return getSettings(res);
+    }
+    if (pathname === "/admin/cookies/api/settings" && method === "PUT") {
+      if (!requireLogin(req, res)) return;
+      return updateSettings(req, res);
     }
 
     const idMatch = /^\/admin\/cookies\/api\/accounts\/(\d+)(\/toggle|\/reconnect)?$/.exec(pathname);

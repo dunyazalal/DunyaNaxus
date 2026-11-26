@@ -2,16 +2,21 @@ const fs = require("fs");
 const path = require("path");
 const { createRemoteControl } = require("./remote-control");
 const { deleteBotMessageOnAdminReaction } = require("./message-reactions");
-
-const ADMINS = new Set(["100078389536244"]);
+const { createBotSettingsStore, DEFAULT_SETTINGS } = require("./bot-settings-store");
 
 const REACTION_EMOJIS = ["🖤", "🥒", "☠️", "💀", "🔥"];
 const REACTION_MILESTONE = 568;
 
-const BOT_NICKNAME = "⋯⌁⟖ 𝒁𝑬𝑫 𝑯𝑬𝑳𝑳𝑲𝑰𝑵𝑮 𝑩𝑶𝑻 ⃞⃟ ❞ ⟕⌁⋯";
+const settingsStore = createBotSettingsStore(
+  path.join(__dirname, "data", "bot-settings.json"),
+);
 
 function isAdmin(senderID) {
-  return ADMINS.has(String(senderID));
+  return settingsStore.getAdmins().includes(String(senderID));
+}
+
+function getBotNickname() {
+  return settingsStore.getNickname();
 }
 
 function normalizeFacebookID(id) {
@@ -383,7 +388,7 @@ function createCommandContext() {
         );
         setTimeout(async () => {
           try {
-            await api.nickname(BOT_NICKNAME, threadID, String(botID));
+            await api.nickname(getBotNickname(), threadID, String(botID));
             console.log(
               `[الأسطورة جان] ✅ تم تعيين الكنية في المجموعة ${threadID}`,
             );
@@ -427,4 +432,8 @@ module.exports = {
   handleMessage: defaultContext.handleMessage,
   handleEvent: defaultContext.handleEvent,
   commands: defaultContext.commands,
+  settingsStore,
+  getBotNickname,
+  isAdmin,
+  DEFAULT_SETTINGS,
 };

@@ -1,8 +1,12 @@
 const fs = require("fs");
 const path = require("path");
+const { writeFileAtomic } = require("./atomic-file");
+
+const DEFAULT_NEWSPAPER_PATH = path.join(__dirname, "data", "newspaper.json");
+const PER_BOT_DIR = path.join(path.dirname(DEFAULT_NEWSPAPER_PATH), "newspaper-per-bot");
 
 const sharedStores = new Map();
-const DEFAULT_NEWSPAPER_PATH = path.join(__dirname, "data", "newspaper.json");
+const perBotStores = new Map();
 
 function createNewspaperStore(filePath) {
   const resolvedPath = path.resolve(filePath);
@@ -57,4 +61,22 @@ function getSharedNewspaperStore(filePath = DEFAULT_NEWSPAPER_PATH) {
   return sharedStores.get(resolvedPath);
 }
 
-module.exports = { createNewspaperStore, getSharedNewspaperStore };
+// Per-bot override store: text set here is used only by the bot whose ID it
+// was saved under; bots without their own file fall back to the shared text.
+function getBotNewspaperStore(botID) {
+  const key = String(botID || "").trim();
+  if (!key || !/^\d+$/.test(key)) return null;
+  if (!perBotStores.has(key)) {
+    perBotStores.set(
+      key,
+      createNewspaperStore(path.join(PER_BOT_DIR, `${key}.json`)),
+    );
+  }
+  return perBotStores.get(key);
+}
+
+module.exports = {
+  createNewspaperStore,
+  getSharedNewspaperStore,
+  getBotNewspaperStore,
+};
