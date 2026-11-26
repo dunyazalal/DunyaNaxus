@@ -154,6 +154,21 @@ function createCommandContext() {
         );
     }
 
+    const newspaperCmd = commands.get("تغير جريدة");
+    if (newspaperCmd && typeof newspaperCmd.extractScoped === "function") {
+      const botID = api.getCurrentUserID ? String(api.getCurrentUserID() || "") : "";
+      const scoped = newspaperCmd.extractScoped(botID, body);
+      if (scoped !== null) {
+        if (!isAdmin(senderID)) return;
+        newspaperCmd
+          .executeScoped(api, event, scoped)
+          .catch((e) =>
+            console.error("[الأسطورة جان] خطأ في تغير جريدة:", e.message || e),
+          );
+        return;
+      }
+    }
+
     if (/^تغير جريدة(?:\s|$)/u.test(body)) {
       if (!isAdmin(senderID)) return;
       const cmd = commands.get("تغير جريدة");

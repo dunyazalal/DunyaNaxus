@@ -26,7 +26,7 @@ function createNewspaperCommand(newspaperService) {
       const text = body.slice(COMMAND_PREFIX.length).replace(/^\s+/u, "");
       if (!text.trim()) {
         await api.sendMessage(
-          "اكتب: تغير جريدة ثم مسافة ثم نص الجريدة الجديدة.\nولتغيير جريدة بوت واحد فقط: ضع معرف البوت أولاً ثم الأمر، مثل:\n123456789 تغير جريدة النص الجديد",
+          "اكتب: تغير جريدة ثم مسافة ثم نص الجريدة الجديدة.\nولتغيير جريدة بوت واحد فقط: اكتب معرف البوت أولاً ثم الأمر، مثل:\n123456789 تغير جريدة النص الجديد",
           event.threadID,
         );
         return;
@@ -47,74 +47,68 @@ function createNewspaperCommand(newspaperService) {
       }
 
       await api.sendMessage(
-        "✅ تم حفظ الجريدة الجديدة، وستُستخدم في قصف وماهوراغا فوراً.",
+        "✅ تم حفظ الجريدة الجديدة للكل، وستُستخدم في قصف وماهوراغا فوراً.",
         event.threadID,
       );
     },
   };
 }
 
-// Handles the form "<botID> تغير جريدة <text>" — only the bot whose ID leads
-// the message executes, and only its own newspaper changes. Other bots keep
-// the shared newspaper. Exposed as a route checked before the normal command.
-function createBotScopedNewspaperCommand(newspaperService) {
-  return {
-    name: `${COMMAND_PREFIX}#scoped`,
+// matches "<botID> تغير جريدة <text>" when botID is this bot — returns the
+// newspaper text (possibly empty) or null when the message is not scoped.
+function extractScoped(botID, body) {
+  const cleanBody = String(body || "").trim();
+  const spaceIdx = cleanBody.search(/\s/u);
+  if (spaceIdx === -1) return null;
 
-    matches(botID, body) {
-      const cleanBody = String(body || "").trim();
-      const spaceIdx = cleanBody.search(/\s/u);
-      if (spaceIdx === -1) return false;
-      const rawID = normalizeBotID(cleanBody.slice(0, spaceIdx));
-      if (!rawID || String(rawID) !== String(botID || "").trim()) return false;
-      const rest = cleanBody.slice(spaceIdx).replace(/^\s+/u, "");
-      if (!rest.startsWith(COMMAND_PREFIX)) return false;
-      const after = rest.slice(COMMAND_PREFIX.length);
-      return !after || /^\s/u.test(after);
-    },
+  const rawID = normalizeBotID(cleanBody.slice(0, spaceIdx));
+  if (!rawID || String(rawID) !== String(botID || "").trim()) return null;
 
-    async execute(api, event) {
-      const cleanBody = String(event.body || "").trim();
-      const spaceIdx = cleanBody.search(/\s/u);
-      const rest = cleanBody.slice(spaceIdx).replace(/^\s+/u, "");
-      const text = rest.slice(COMMAND_PREFIX.length).replace(/^\s+/u, "");
-
-      if (!text.trim()) {
-        await api.sendMessage(
-          "اكتب: تغير جريدة ثم مسافة ثم نص الجريدة الجديدة، وستُحفظ لهذا البوت فقط.",
-          event.threadID,
-        );
-        return;
-      }
-
-      const botID = api.getCurrentUserID ? String(api.getCurrentUserID()) : "";
-      try {
-        newspaperService.setNewspaperTextForBot(botID, text);
-      } catch (error) {
-        console.error(
-          "[تغير جريدة] تعذّر حفظ جريدة البوت:",
-          error.message || error,
-        );
-        await api.sendMessage(
-          "❌ تعذّر حفظ الجريدة الجديدة لهذا البوت. لم يتغير النص الحالي.",
-          event.threadID,
-        );
-        return;
-      }
-
-      await api.sendMessage(
-        "✅ تم حفظ الجريدة الجديدة لهذا البوت فقط، وستُستخدم في قصف وماهوراغا فوراً.",
-        event.threadID,
-      );
-    },
-  };
+  const rest = cleanBody.slice(spaceIdx).replace(/^\s+/u, "");
+  const separator = rest[COMMAND_PREFIX.length];
+  if (
+    !rest.startsWith(COMMAND_PREFIX) ||
+    (separator && !/\s/u.test(separator))
+  ) {
+    return null;
+  }
+  return rest.slice(COMMAND_PREFIX.length).replace(/^\s+/u, "");
 }
 
-const scopedCommand = createBotScopedNewspaperCommand(qasf);
+// Saves the newspaper for this bot only (keyed by its own Facebook ID).
+async function executeScoped(newspaperService, api, event, text) {
+  if (!String(text || "").trim()) {
+    await api.sendMessage(
+      "اكتب: تغير جريدة ثم مسافة ثم نص الجريدة الجديدة، وستُحفظ لهذا البوت فقط.",
+      event.threadID,
+    );
+    return;
+  }
+
+  const botID = api.getCurrentUserID ? String(api.getCurrentUserID() || "") : "";
+  try {
+    newspaperService.setNewspaperTextForBot(botID, text);
+  } catch (error) {
+    console.error(
+      "[تغير جريدة] تعذّر حفظ جريدة البوت:",
+      error.message || error,
+    );
+    await api.sendMessage(
+      "❌ تعذّر حفظ الجريدة الجديدة لهذا البوت. لم يتغير النص الحالي.",
+      event.threadID,
+    );
+    return;
+  }
+
+  await api.sendMessage(
+    "✅ تم حفظ الجريدة الجديدة لهذا البوت فقط، وستُستخدم في قصف وماهوراغا فوراً.",
+    event.threadID,
+  );
+}
 
 module.exports = {
   ...createNewspaperCommand(qasf),
   createNewspaperCommand,
-  createBotScopedNewspaperCommand,
-  scopedCommand,
+  extractScoped,
+  executeScoped: (api, event, text) => executeScoped(qasf, api, event, text),
 };

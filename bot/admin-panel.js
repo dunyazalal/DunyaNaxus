@@ -1,5 +1,6 @@
 const http = require("http");
 const crypto = require("crypto");
+const path = require("path");
 const { readPanelPage } = require("./admin-panel-page");
 const { createBotSettingsStore, DEFAULT_SETTINGS } = require("./bot-settings-store");
 
