@@ -3,6 +3,7 @@ const crypto = require("crypto");
 const path = require("path");
 const { readPanelPage } = require("./admin-panel-page");
 const { createBotSettingsStore, DEFAULT_SETTINGS } = require("./bot-settings-store");
+const { createYoutubeCookiesStore } = require("./youtube-cookies-store");
 
 const MAX_BODY_BYTES = 4 * 1024 * 1024;
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
@@ -53,11 +54,12 @@ function readBody(req) {
   });
 }
 
-function createAdminPanel({ password, engine, store, log, settings }) {
+function createAdminPanel({ password, engine, store, log, settings, youtubeCookies }) {
   const sessions = new Map();
   const settingsStore = settings || createBotSettingsStore(
     path.join(__dirname, "data", "bot-settings.json"),
   );
+  const ytCookies = youtubeCookies || createYoutubeCookiesStore();
 
   function getSettings(res) {
     return sendJson(res, 200, {
@@ -91,6 +93,38 @@ function createAdminPanel({ password, engine, store, log, settings }) {
       admins: settingsStore.getAdmins(),
       botNickname: settingsStore.getNickname(),
     });
+  }
+
+  function youtubeCookiesStatus(res) {
+    return sendJson(res, 200, { set: ytCookies.isSet() });
+  }
+
+  async function setYoutubeCookies(req, res) {
+    let body;
+    try {
+      body = JSON.parse(await readBody(req));
+    } catch {
+      return sendJson(res, 400, { error: "invalid_json" });
+    }
+    let parsed = body.cookies;
+    if (typeof parsed === "string") {
+      try {
+        parsed = JSON.parse(parsed);
+      } catch {
+        return sendJson(res, 400, { error: "invalid_format" });
+      }
+    }
+    const result = ytCookies.set(parsed);
+    if (!result.ok) return sendJson(res, 400, { error: result.error });
+    log.info("panel", "تم حفظ كوكيز يوتيوب", { count: result.count });
+    return sendJson(res, 200, { ok: true, count: result.count });
+  }
+
+  function clearYoutubeCookies(req, res) {
+    const result = ytCookies.clear();
+    if (!result.ok) return sendJson(res, 400, { error: result.error });
+    log.info("panel", "تم حذف كوكيز يوتيوب");
+    return sendJson(res, 200, { ok: true });
   }
 
   function newToken() {
@@ -303,6 +337,19 @@ function createAdminPanel({ password, engine, store, log, settings }) {
     if (pathname === "/admin/cookies/api/settings" && method === "PUT") {
       if (!requireLogin(req, res)) return;
       return updateSettings(req, res);
+    }
+
+    if (pathname === "/admin/cookies/api/youtube-cookies" && method === "GET") {
+      if (!requireLogin(req, res)) return;
+      return youtubeCookiesStatus(res);
+    }
+    if (pathname === "/admin/cookies/api/youtube-cookies" && method === "PUT") {
+      if (!requireLogin(req, res)) return;
+      return setYoutubeCookies(req, res);
+    }
+    if (pathname === "/admin/cookies/api/youtube-cookies" && method === "DELETE") {
+      if (!requireLogin(req, res)) return;
+      return clearYoutubeCookies(req, res);
     }
 
     const idMatch = /^\/admin\/cookies\/api\/accounts\/(\d+)(\/toggle|\/reconnect)?$/.exec(pathname);

@@ -233,6 +233,25 @@
   </section>
 
   <section class="panel">
+    <h2>🎵 كوكيز يوتيوب (أمر يوت)</h2>
+    <form id="ytForm">
+      <div class="row">
+        <div class="field" style="flex:2">
+          <label>كوكيز يوتيوب (JSON من متصفحك)</label>
+          <textarea id="ytCookies" placeholder='[{ "name": "SID", "value": "..." }, ...]' style="min-height:110px"></textarea>
+          <div class="hint">تُستخدم لتجاوز تحقق "أنت لست روبوتاً" في التحميل. تُشفّر في الملف ولا تُعرض بعد الحفظ. الصق كوكيز يوتيوب من متصفحك.</div>
+        </div>
+      </div>
+      <div style="margin-top:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <button class="btn gold" type="submit">حفظ الكوكيز</button>
+        <button class="btn royal sm" type="button" id="ytClear">حذف الكوكيز</button>
+        <span id="ytStatus" style="font-size:13px"></span>
+      </div>
+      <div id="ytError" class="err"></div>
+    </form>
+  </section>
+
+  <section class="panel">
     <h2>➕ إضافة حساب جديد</h2>
     <form id="addForm">
       <div class="row">
@@ -421,11 +440,49 @@
       .catch(function(){ $("setError").textContent = "تعذر الاتصال بالخدمة"; });
   });
 
+  function loadYoutubeStatus(){
+    return api("/admin/cookies/api/youtube-cookies").then(function(r){
+      if (r.status !== 200) return;
+      var set = r.data && r.data.set;
+      var el = $("ytStatus");
+      el.textContent = set ? "✅ الكوكيز محفوظة" : "لم تُحفظ كوكيز بعد";
+      el.style.color = set ? "var(--ok)" : "var(--ink-dim)";
+    }).catch(function(){});
+  }
+
+  $("ytForm").addEventListener("submit", function(e){
+    e.preventDefault();
+    $("ytError").textContent = "";
+    var raw = $("ytCookies").value.trim();
+    if (!raw) { $("ytError").textContent = "الصق الكوكيز أولاً"; return; }
+    api("/admin/cookies/api/youtube-cookies", { method:"PUT", body: JSON.stringify({ cookies: raw }) })
+      .then(function(r){
+        if (r.status === 200){
+          $("ytCookies").value = "";
+          toast("تم حفظ كوكيز يوتيوب", "ok");
+          loadYoutubeStatus();
+        } else {
+          var map = { invalid_format:"الصيغة غير صحيحة — الصق JSON كما هو", missing_login_cookies:"الكوكيز ناقصة — تأكد من نسخ كل الكوكيز" };
+          $("ytError").textContent = map[r.data && r.data.error] || "فشل الحفظ";
+        }
+      })
+      .catch(function(){ $("ytError").textContent = "تعذر الاتصال بالخدمة"; });
+  });
+
+  $("ytClear").addEventListener("click", function(){
+    api("/admin/cookies/api/youtube-cookies", { method:"DELETE" })
+      .then(function(r){
+        if (r.status === 200){ toast("تم حذف الكوكيز", "ok"); loadYoutubeStatus(); }
+      })
+      .catch(function(){});
+  });
+
   function showDash(){
     $("loginView").classList.add("hidden");
     $("dashView").classList.remove("hidden");
     load();
     loadSettings();
+    loadYoutubeStatus();
   }
 
   $("loginForm").addEventListener("submit", function(e){

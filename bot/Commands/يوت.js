@@ -5,10 +5,12 @@ const path = require('path');
 // yt-dlp و ffmpeg يأتيان مع الحزم تلقائياً عند التثبيت على Railway،
 // ولا يحتاج أي تثبيت يدوي لأدوات النظام.
 const ytdlConstants = require('youtube-dl-exec').constants;
+const { createYoutubeCookiesStore } = require('../youtube-cookies-store');
 const YTDL_PATH = process.env.YTDL_PATH || ytdlConstants.YOUTUBE_DL_PATH;
 const FFMPEG_PATH = require('@ffmpeg-installer/ffmpeg').path;
 const FFMPEG_DIR = path.dirname(FFMPEG_PATH);
 const YOUTUBE_STATE_PATH = path.join(__dirname, '..', 'data', 'youtube-state.json');
+const youtubeCookies = createYoutubeCookiesStore();
 
 // ffprobe يأتي في مجلد منفصل، و yt-dlp يبحث عنه بجانب ffmpeg،
 // لذلك ننسخه مرة واحدة ليجده.
@@ -32,7 +34,11 @@ function downloadAudio(query, outFile) {
 
     // Node يُستخدم كبيئة جافاسكربت لأنه موجود دائماً في Railway
     // (Deno غير متوفر هناك).
-    const cmd = `"${YTDL_PATH}" --ffmpeg-location "${FFMPEG_PATH}" --js-runtimes node --remote-components ejs:github "ytsearch1:${safeQuery}" -x --audio-format mp3 --audio-quality 0 --no-playlist -o "${outFile}"`;
+    const cookiesFile = youtubeCookies.toNetscapeFile(
+      path.join(__dirname, '..', 'tmp', 'yt-cookies.txt'),
+    );
+    const cookiesArg = cookiesFile ? ` --cookies "${cookiesFile}"` : '';
+    const cmd = `"${YTDL_PATH}" --ffmpeg-location "${FFMPEG_PATH}"${cookiesArg} --js-runtimes node --remote-components ejs:github "ytsearch1:${safeQuery}" -x --audio-format mp3 --audio-quality 0 --no-playlist -o "${outFile}"`;
     console.log(`[يوت] تنفيذ: ${cmd}`);
 
     exec(cmd, {
