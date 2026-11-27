@@ -41,6 +41,7 @@ node_modules
 /bot/account.txt
 /bot/appstate.json.bak.*
 /bot/**/*cookie*
+!/bot/youtube-cookies-store.js
 /bot/data/accounts.enc.json*
 /bot/**/*token*.json
 /bot/logs/
