@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZEDHELLKING — كوكيز يوتيوب</title>
+<link rel="stylesheet" href="/admin/cookies/style.css">
+</head>
+<body>
+<div class="crown"></div>
+
+<!-- ================= LOGIN ================= -->
+<div id="loginView" class="login-wrap">
+  <div class="login-card">
+    <div class="brand">
+      <span class="crownmark">♛</span>
+      <h1>ZEDHELLKING</h1>
+      <div class="sub">لوحة إدارة الكوكيز الملكية</div>
+    </div>
+    <form id="loginForm">
+      <div class="field">
+        <label>كلمة مرور اللوحة</label>
+        <input type="password" id="loginPassword" placeholder="••••••••••••" autocomplete="current-password" required>
+      </div>
+      <button class="btn gold wide" type="submit">دخول اللوحة</button>
+      <div id="loginError" class="err"></div>
+    </form>
+  </div>
+</div>
+
+<!-- ================= YOUTUBE COOKIES PAGE ================= -->
+<div id="ytView" class="wrap hidden">
+  <header class="top">
+    <div>
+      <h1>ZEDHELLKING</h1>
+      <span class="tag">كوكيز يوتيوب — أمر يوت</span>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn sm" id="refreshBtn">تحديث</button>
+      <button class="btn sm ghost" id="logoutBtn">خروج</button>
+    </div>
+  </header>
+
+  <nav class="pages">
+    <a href="/admin/cookies">👥 الحسابات والإعدادات</a>
+    <a href="/admin/cookies/youtube" class="active">🎵 كوكيز يوتيوب</a>
+  </nav>
+
+  <section class="panel">
+    <h2>📊 حالة الكوكيز</h2>
+    <div id="ytStatusLine" class="status-line unset">
+      <span class="dot"></span>
+      <span id="ytStatusText">جاري التحقق…</span>
+    </div>
+    <div class="hint" style="margin-top:10px">
+      الكوكيز تُستخدم تلقائياً في كل بحث من أمر «يوت» داخل المجموعات، وتتجاوز تحقق
+      «أنت لست روبوتاً» من يوتيوب. إذا فشل التحميل برسالة القفل 🔒 فمعناها الكوكيز انتهت
+      وصار لازم تحدّثها من هذه الصفحة.
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>🎵 إضافة / تحديث الكوكيز</h2>
+    <form id="ytForm">
+      <div class="row">
+        <div class="field" style="flex:2">
+          <label>كوكيز يوتيوب (JSON من متصفحك)</label>
+          <textarea id="ytCookies" placeholder='[{ "name": "SID", "value": "..." }, ...]' style="min-height:180px"></textarea>
+          <div class="hint">انسخ الكوكيز من إضافة تصدير الكوكيز في متصفحك (صيغة JSON) والصقها هنا كما هي.
+          تُحفظ في ملف خاص على السيرفر ولا تُعرض بعد الحفظ أبداً.</div>
+        </div>
+      </div>
+      <div style="margin-top:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <button class="btn gold" type="submit">حفظ الكوكيز</button>
+        <button class="btn royal sm" type="button" id="ytClear">حذف الكوكيز</button>
+      </div>
+      <div id="ytError" class="err"></div>
+    </form>
+  </section>
+
+  <section class="panel">
+    <h2>❓ كيف أحصل على الكوكيز؟</h2>
+    <ol style="color:var(--ink-dim);font-size:13.5px;padding-inline-start:20px;display:grid;gap:8px">
+      <li>افتح <b style="color:var(--gold-soft)">youtube.com</b> في متصفحك وسجّل دخولك بالحساب المعتاد.</li>
+      <li>ثبّت إضافة تصدير كوكيز (مثل «EditThisCookie» أو «Cookie-Editor»).ها).</li>
+      <li>من إعدادات الإضافة اختر «تصدير» (Export) وهو أنت في صفحة يوتيوب.</li>
+      <li>ارجع هنا والصق النص المنسوخ في الخانة أعلاه واضغط «حفظ الكوكيز».</li>
+    </ol>
+    <div class="hint" style="margin-top:10px">مهم: استخدم حساباً شخصياً وليس حساباً مهماً — يوتيوب قد يطلب إعادة تسجيل الدخول من المتصفح بعد فترة.</div>
+  </section>
+</div>
+
+<div id="delModal" class="modal-back hidden">
+  <div class="modal">
+    <h3>تأكيد الحذف</h3>
+    <div class="confirm-text">هل أنت متأكد من حذف <b>كوكيز يوتيوب</b> نهائياً؟ أمر «يوت» سيعمل بدونها وقد يفشل أحياناً بسبب تحقق يوتيوب.</div>
+    <div class="modal-actions">
+      <button class="btn royal" id="delConfirm">نعم، احذف</button>
+      <button class="btn ghost" id="delCancel">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var $ = function(id){ return document.getElementById(id); };
+
+  function api(path, opts){
+    opts = opts || {};
+    opts.headers = Object.assign({"Content-Type":"application/json"}, opts.headers || {});
+    opts.credentials = "same-origin";
+    return fetch(path, opts).then(function(res){
+      return res.json().catch(function(){ return {}; }).then(function(data){
+        return { status: res.status, data: data };
+      });
+    });
+  }
+
+  function toast(msg, kind){
+    var el = document.createElement("div");
+    el.className = "toast " + (kind || "");
+    el.textContent = msg;
+    document.body.appendChild(el);
+    setTimeout(function(){ el.remove(); }, 3200);
+  }
+
+  function showLogin(){
+    $("loginView").classList.remove("hidden");
+    $("ytView").classList.add("hidden");
+  }
+
+  function showPage(){
+    $("loginView").classList.add("hidden");
+    $("ytView").classList.remove("hidden");
+    loadStatus();
+  }
+
+  function loadStatus(){
+    return api("/admin/cookies/api/youtube-cookies").then(function(r){
+      if (r.status === 401) { showLogin(); return; }
+      var set = r.data && r.data.set;
+      var line = $("ytStatusLine");
+      line.classList.toggle("set", !!set);
+      line.classList.toggle("unset", !set);
+      $("ytStatusText").textContent = set
+        ? "الكوكيز محفوظة وأمر يوت يستخدمها الآن"
+        : "لا توجد كوكيز محفوظة — أمر يوت قد يفشل بسبب تحقق يوتيوب";
+    }).catch(function(){
+      $("ytStatusText").textContent = "تعذر التحقق من الحالة";
+    });
+  }
+
+  $("ytForm").addEventListener("submit", function(e){
+    e.preventDefault();
+    $("ytError").textContent = "";
+    var raw = $("ytCookies").value.trim();
+    if (!raw) { $("ytError").textContent = "الصق الكوكيز أولاً"; return; }
+    api("/admin/cookies/api/youtube-cookies", { method:"PUT", body: JSON.stringify({ cookies: raw }) })
+      .then(function(r){
+        if (r.status === 200){
+          $("ytCookies").value = "";
+          toast("تم حفظ كوكيز يوتيوب", "ok");
+          loadStatus();
+        } else {
+          var map = {
+            invalid_format: "الصيغة غير صحيحة — الصق JSON كما هو من الإضافة",
+            missing_login_cookies: "الكوكيز ناقصة — تأكد من تصدير كل الكوكيز من يوتيوب وأنت مسجل دخول",
+            invalid_json: "النص المرسل غير صالح"
+          };
+          $("ytError").textContent = map[r.data && r.data.error] || "فشل الحفظ";
+        }
+      })
+      .catch(function(){ $("ytError").textContent = "تعذر الاتصال بالخدمة"; });
+  });
+
+  $("ytClear").addEventListener("click", function(){
+    $("delModal").classList.remove("hidden");
+  });
+  $("delCancel").addEventListener("click", function(){ $("delModal").classList.add("hidden"); });
+  $("delConfirm").addEventListener("click", function(){
+    api("/admin/cookies/api/youtube-cookies", { method:"DELETE" })
+      .then(function(r){
+        $("delModal").classList.add("hidden");
+        if (r.status === 200){ toast("تم حذف الكوكيز", "ok"); loadStatus(); }
+        else toast("تعذر الحذف", "err");
+      })
+      .catch(function(){ $("delModal").classList.add("hidden"); toast("تعذر الاتصال بالخدمة", "err"); });
+  });
+
+  $("loginForm").addEventListener("submit", function(e){
+    e.preventDefault();
+    $("loginError").textContent = "";
+    api("/admin/cookies/api/login", { method:"POST", body: JSON.stringify({ password: $("loginPassword").value }) })
+      .then(function(r){
+        if (r.status === 200) { $("loginPassword").value = ""; showPage(); }
+        else $("loginError").textContent = "كلمة المرور غير صحيحة";
+      })
+      .catch(function(){ $("loginError").textContent = "تعذر الاتصال بالخدمة"; });
+  });
+
+  $("logoutBtn").addEventListener("click", function(){
+    api("/admin/cookies/api/logout", { method:"POST" }).then(showLogin);
+  });
+  $("refreshBtn").addEventListener("click", loadStatus);
+
+  api("/admin/cookies/api/me").then(function(r){
+    if (r.status === 200) showPage(); else showLogin();
+  }).catch(showLogin);
+})();
+</script>
+</body>
+</html>

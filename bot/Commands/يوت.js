@@ -47,9 +47,17 @@ function downloadAudio(query, outFile) {
     }, (err, stdout, stderr) => {
       if (fs.existsSync(outFile) && fs.statSync(outFile).size > 0) {
         resolve();
-      } else if (err) {
-        console.error(`[يوت] yt-dlp stderr:`, stderr || err.message);
-        reject(new Error(stderr || err.message));
+      } else if (err || stderr) {
+        const failure = (stderr || err?.message || '').trim();
+        const code = err ? err.code : 'unknown';
+        console.error(`[يوت] فشل yt-dlp (رمز ${code}):`, failure.slice(-600));
+        const error = new Error(failure || 'الملف لم يُنشأ');
+        if (/Sign in to confirm|not a bot|cookies/i.test(failure)) {
+          error.kind = 'bot_check';
+        } else if (/ffmpeg|ffprobe/i.test(failure)) {
+          error.kind = 'ffmpeg';
+        }
+        reject(error);
       } else {
         reject(new Error('الملف لم يُنشأ'));
       }
@@ -200,11 +208,17 @@ function createYoutubeCommand({
       } catch (err) {
         console.error(`[يوت] فشل:`, err.message);
 
+        let failureMessage = '❌ لم يُعثر علي المقطع أو فشل التحميل، جرب اسماً آخر.';
+        if (err.kind === 'bot_check') {
+          failureMessage = youtubeCookies.isSet()
+            ? '🔒 يوتيوب رفض الكوكيز المحفوظة (غالباً انتهت صلاحيتها). حدّث الكوكيز من لوحة الإدارة → صفحة كوكيز يوتيوب.'
+            : '🔒 يوتيوب يطلب تسجيل دخول. أضف كوكيز يوتيوب من لوحة الإدارة → صفحة كوكيز يوتيوب.';
+        } else if (err.kind === 'ffmpeg') {
+          failureMessage = '⚠️ مشكلة في أداة التحويل على السيرفر. أعد تشغيل الخدمة، وإن استمرت أخبر المطور.';
+        }
+
         try {
-          await api.sendMessage(
-            '❌ لم يُعثر علي المقطع أو فشل التحميل، جرب اسماً آخر.',
-            threadID
-          );
+          await api.sendMessage(failureMessage, threadID);
         } catch (e) {}
 
       } finally {

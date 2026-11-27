@@ -2,6 +2,7 @@ const http = require("http");
 const crypto = require("crypto");
 const path = require("path");
 const { readPanelPage } = require("./admin-panel-page");
+const { readYoutubePage, readPanelStyles } = require("./admin-panel-page");
 const { createBotSettingsStore, DEFAULT_SETTINGS } = require("./bot-settings-store");
 const { createYoutubeCookiesStore } = require("./youtube-cookies-store");
 
@@ -311,6 +312,16 @@ function createAdminPanel({ password, engine, store, log, settings, youtubeCooki
     if (method === "GET" && (pathname === "/admin/cookies" || pathname === "/admin/cookies/")) {
       res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
       return res.end(readPanelPage());
+    }
+
+    if (method === "GET" && pathname === "/admin/cookies/youtube") {
+      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
+      return res.end(readYoutubePage());
+    }
+
+    if (method === "GET" && pathname === "/admin/cookies/style.css") {
+      res.writeHead(200, { "Content-Type": "text/css; charset=utf-8", "Cache-Control": "no-store" });
+      return res.end(readPanelStyles());
     }
 
     if (pathname === "/admin/cookies/api/login" && method === "POST") return login(req, res);

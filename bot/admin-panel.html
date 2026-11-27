@@ -4,167 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ZEDHELLKING — لوحة إدارة الكوكيز</title>
-<style>
-  :root{
-    --bg:#07060a; --bg2:#0c0a12; --card:#120f18; --card2:#171320;
-    --gold:#e8b44a; --gold-soft:#f5d78e; --gold-dim:rgba(232,180,74,.14);
-    --royal:#d92038; --royal-soft:rgba(217,32,56,.16);
-    --ink:#efe9dc; --ink-dim:#9a917f; --ink-faint:#655e50;
-    --ok:#3ecf7a; --warn:#e8b44a; --bad:#ff4d5e;
-    --border:rgba(232,180,74,.18); --radius:16px;
-    --font:'Segoe UI',Tahoma,Arial,sans-serif;
-  }
-  *{margin:0;padding:0;box-sizing:border-box}
-  html,body{min-height:100%}
-  body{
-    font-family:var(--font); background:var(--bg); color:var(--ink);
-    background-image:
-      radial-gradient(1100px 500px at 85% -10%, rgba(217,32,56,.10), transparent 60%),
-      radial-gradient(900px 480px at 10% 110%, rgba(232,180,74,.09), transparent 60%);
-    line-height:1.6;
-  }
-  .crown{position:fixed;inset:0;pointer-events:none;z-index:0;
-    background:radial-gradient(600px 220px at 50% 0%, rgba(232,180,74,.10), transparent 70%)}
-  .wrap{position:relative;z-index:1;max-width:1180px;margin:0 auto;padding:24px 18px 60px}
-  .hidden{display:none!important}
-
-  /* ====== login ====== */
-  .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
-  .login-card{
-    width:100%;max-width:420px;background:linear-gradient(160deg,var(--card2),var(--card));
-    border:1px solid var(--border);border-radius:22px;padding:40px 34px;
-    box-shadow:0 0 60px rgba(232,180,74,.07), inset 0 1px 0 rgba(255,255,255,.03);
-    animation:rise .5s ease both;
-  }
-  .brand{ text-align:center; margin-bottom:26px}
-  .brand h1{
-    font-size:34px; letter-spacing:6px; font-weight:800;
-    background:linear-gradient(90deg,#8a6420,var(--gold-soft),#fff0c4,var(--gold),#8a6420);
-    background-size:220% auto; -webkit-background-clip:text; background-clip:text;
-    -webkit-text-fill-color:transparent;
-    animation:shine 5s linear infinite;
-  }
-  .brand .sub{color:var(--ink-dim);font-size:13px;letter-spacing:2px;margin-top:4px}
-  .brand .crownmark{font-size:22px;color:var(--gold);text-shadow:0 0 18px rgba(232,180,74,.8);display:block;margin-bottom:6px}
-  .field{margin-bottom:16px}
-  .field label{display:block;font-size:12px;color:var(--ink-dim);margin-bottom:6px;letter-spacing:1px}
-  .field input, .field textarea{
-    width:100%;background:#0a0810;border:1px solid var(--border);border-radius:10px;
-    color:var(--ink);padding:12px 14px;font-size:14px;font-family:var(--font);
-    transition:border-color .25s, box-shadow .25s;
-  }
-  .field input:focus,.field textarea:focus{
-    outline:none;border-color:var(--gold);box-shadow:0 0 0 3px var(--gold-dim)
-  }
-  .btn{
-    display:inline-flex;align-items:center;justify-content:center;gap:8px;
-    background:linear-gradient(135deg,#2b2113,#4a3414);color:var(--gold-soft);
-    border:1px solid var(--border);border-radius:12px;padding:12px 22px;font-size:14px;font-weight:700;
-    cursor:pointer;font-family:var(--font);letter-spacing:.5px;
-    transition:transform .18s, box-shadow .25s, border-color .25s;
-  }
-  .btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(232,180,74,.18);border-color:var(--gold)}
-  .btn:active{transform:translateY(0)}
-  .btn.gold{background:linear-gradient(135deg,#3d2c10,#6b4c16);color:#ffe9b3;border-color:rgba(232,180,74,.4)}
-  .btn.royal{background:linear-gradient(135deg,#3d0d14,#5c1220);color:#ffc9cf;border-color:rgba(217,32,56,.4)}
-  .btn.ghost{background:transparent;color:var(--ink-dim)}
-  .btn.ghost:hover{color:var(--ink);border-color:var(--ink-faint)}
-  .btn.sm{padding:7px 14px;font-size:12.5px;border-radius:9px}
-  .btn.wide{width:100%}
-  .btn.danger{color:var(--bad)}
-  .err{color:var(--bad);font-size:13px;text-align:center;margin-top:12px;min-height:18px}
-  .okmsg{color:var(--ok);font-size:13px;text-align:center;margin-top:12px;min-height:18px}
-
-  /* ====== dashboard ====== */
-  header.top{
-    display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
-    padding:18px 22px;margin-bottom:22px;border-radius:var(--radius);
-    background:linear-gradient(120deg, rgba(232,180,74,.06), rgba(217,32,56,.05));
-    border:1px solid var(--border); backdrop-filter:blur(6px);
-  }
-  header.top h1{
-    font-size:26px;letter-spacing:5px;font-weight:800;
-    background:linear-gradient(90deg,#8a6420,var(--gold-soft),#fff0c4,var(--gold),#8a6420);
-    background-size:220% auto;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
-    animation:shine 5s linear infinite;
-  }
-  header.top .tag{color:var(--ink-dim);font-size:12px;letter-spacing:1.5px;display:block;margin-top:2px}
-  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:22px}
-  .stat{
-    background:linear-gradient(160deg,var(--card2),var(--card));border:1px solid var(--border);
-    border-radius:var(--radius);padding:16px 18px;position:relative;overflow:hidden;
-    transition:transform .2s, box-shadow .3s;
-  }
-  .stat:hover{transform:translateY(-3px);box-shadow:0 10px 30px rgba(0,0,0,.5), 0 0 24px rgba(232,180,74,.08)}
-  .stat::after{content:"";position:absolute;inset-inline-start:0;top:0;bottom:0;width:3px;
-    background:linear-gradient(180deg,var(--gold),transparent)}
-  .stat.royal::after{background:linear-gradient(180deg,var(--royal),transparent)}
-  .stat .num{font-size:26px;font-weight:800;color:var(--gold-soft)}
-  .stat.royal .num{color:#ff8f9b}
-  .stat .lbl{font-size:12px;color:var(--ink-dim);letter-spacing:1px}
-  .stat .ico{position:absolute;inset-inline-end:14px;top:14px;font-size:18px;opacity:.75}
-
-  .panel{
-    background:linear-gradient(160deg,var(--card2),var(--card));border:1px solid var(--border);
-    border-radius:var(--radius);padding:22px;margin-bottom:22px;
-  }
-  .panel h2{font-size:15px;color:var(--gold-soft);letter-spacing:1.5px;margin-bottom:16px;display:flex;align-items:center;gap:8px}
-  .row{display:flex;gap:12px;flex-wrap:wrap}
-  .row .field{flex:1;min-width:180px}
-  .field textarea{min-height:130px;resize:vertical;font-size:12px;direction:ltr;text-align:left;font-family:monospace}
-  .hint{font-size:11.5px;color:var(--ink-faint);margin-top:6px}
-
-  table{width:100%;border-collapse:collapse;font-size:13.5px}
-  th{color:var(--ink-dim);font-weight:600;font-size:12px;letter-spacing:1px;text-align:right;
-    padding:10px 12px;border-bottom:1px solid var(--border)}
-  td{padding:12px;border-bottom:1px solid rgba(255,255,255,.04);vertical-align:middle}
-  tr:hover td{background:rgba(232,180,74,.03)}
-  .name{font-weight:700;color:var(--gold-soft)}
-  .badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:999px;font-size:12px;font-weight:600;border:1px solid}
-  .badge .dot{width:7px;height:7px;border-radius:50%;background:currentColor;box-shadow:0 0 8px currentColor}
-  .b-online{color:var(--ok);border-color:rgba(62,207,122,.35);background:rgba(62,207,122,.08)}
-  .b-connecting{color:var(--warn);border-color:rgba(232,180,74,.35);background:rgba(232,180,74,.08)}
-  .b-offline{color:var(--ink-dim);border-color:rgba(255,255,255,.12);background:rgba(255,255,255,.04)}
-  .b-error{color:var(--bad);border-color:rgba(255,77,94,.35);background:rgba(255,77,94,.08)}
-  .acts{display:flex;gap:6px;flex-wrap:wrap}
-  .empty{color:var(--ink-faint);text-align:center;padding:30px 0;font-size:14px}
-  .actionsbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
-  .search{flex:1;min-width:160px}
-
-  .modal-back{
-    position:fixed;inset:0;background:rgba(4,3,8,.72);backdrop-filter:blur(4px);
-    display:flex;align-items:center;justify-content:center;z-index:50;padding:20px;
-    animation:fade .2s ease both;
-  }
-  .modal{
-    width:100%;max-width:480px;background:linear-gradient(160deg,var(--card2),var(--card));
-    border:1px solid var(--border);border-radius:20px;padding:28px;
-    box-shadow:0 0 80px rgba(232,180,74,.09);animation:rise .3s ease both;
-  }
-  .modal h3{color:var(--gold-soft);letter-spacing:1px;margin-bottom:18px;font-size:16px}
-  .confirm-text{color:var(--ink-dim);font-size:14px;margin-bottom:20px}
-  .confirm-text b{color:var(--gold-soft)}
-  .modal-actions{display:flex;gap:10px;justify-content:flex-start}
-
-  .toast{
-    position:fixed;bottom:26px;inset-inline-start:50%;transform:translateX(50%);
-    background:#1a1522;border:1px solid var(--border);color:var(--ink);
-    padding:12px 22px;border-radius:12px;font-size:13.5px;z-index:99;
-    box-shadow:0 10px 34px rgba(0,0,0,.6);animation:rise .25s ease both;
-  }
-  .toast.err{border-color:rgba(255,77,94,.5);color:#ffb9c0}
-  .toast.ok{border-color:rgba(62,207,122,.5);color:#b9f0cd}
-
-  @keyframes shine{to{background-position:-220% center}}
-  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
-  @keyframes fade{from{opacity:0}to{opacity:1}}
-  @media(max-width:640px){
-    .brand h1{font-size:26px;letter-spacing:4px}
-    header.top h1{font-size:20px;letter-spacing:3px}
-    td,th{padding:9px 8px}
-    .acts .btn.sm{padding:6px 10px}
-  }
-</style>
+<link rel="stylesheet" href="/admin/cookies/style.css">
 </head>
 <body>
 <div class="crown"></div>
@@ -201,6 +41,11 @@
     </div>
   </header>
 
+  <nav class="pages">
+    <a href="/admin/cookies" class="active">👥 الحسابات والإعدادات</a>
+    <a href="/admin/cookies/youtube">🎵 كوكيز يوتيوب</a>
+  </nav>
+
   <section class="stats">
     <div class="stat"><span class="ico">👥</span><div class="num" id="stTotal">0</div><div class="lbl">إجمالي الحسابات</div></div>
     <div class="stat"><span class="ico">🟢</span><div class="num" id="stOnline">0</div><div class="lbl">متصلة الآن</div></div>
@@ -229,25 +74,6 @@
         <span id="setError" class="err" style="min-height:0"></span>
       </div>
       <div class="hint">الكلمة الجديدة تُستخدم عند تعيين كنية البوت في المجموعات. معرّف الأدمن يتحكم بمن يستطيع إرسال الأوامر.</div>
-    </form>
-  </section>
-
-  <section class="panel">
-    <h2>🎵 كوكيز يوتيوب (أمر يوت)</h2>
-    <form id="ytForm">
-      <div class="row">
-        <div class="field" style="flex:2">
-          <label>كوكيز يوتيوب (JSON من متصفحك)</label>
-          <textarea id="ytCookies" placeholder='[{ "name": "SID", "value": "..." }, ...]' style="min-height:110px"></textarea>
-          <div class="hint">تُستخدم لتجاوز تحقق "أنت لست روبوتاً" في التحميل. تُشفّر في الملف ولا تُعرض بعد الحفظ. الصق كوكيز يوتيوب من متصفحك.</div>
-        </div>
-      </div>
-      <div style="margin-top:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-        <button class="btn gold" type="submit">حفظ الكوكيز</button>
-        <button class="btn royal sm" type="button" id="ytClear">حذف الكوكيز</button>
-        <span id="ytStatus" style="font-size:13px"></span>
-      </div>
-      <div id="ytError" class="err"></div>
     </form>
   </section>
 
@@ -440,49 +266,11 @@
       .catch(function(){ $("setError").textContent = "تعذر الاتصال بالخدمة"; });
   });
 
-  function loadYoutubeStatus(){
-    return api("/admin/cookies/api/youtube-cookies").then(function(r){
-      if (r.status !== 200) return;
-      var set = r.data && r.data.set;
-      var el = $("ytStatus");
-      el.textContent = set ? "✅ الكوكيز محفوظة" : "لم تُحفظ كوكيز بعد";
-      el.style.color = set ? "var(--ok)" : "var(--ink-dim)";
-    }).catch(function(){});
-  }
-
-  $("ytForm").addEventListener("submit", function(e){
-    e.preventDefault();
-    $("ytError").textContent = "";
-    var raw = $("ytCookies").value.trim();
-    if (!raw) { $("ytError").textContent = "الصق الكوكيز أولاً"; return; }
-    api("/admin/cookies/api/youtube-cookies", { method:"PUT", body: JSON.stringify({ cookies: raw }) })
-      .then(function(r){
-        if (r.status === 200){
-          $("ytCookies").value = "";
-          toast("تم حفظ كوكيز يوتيوب", "ok");
-          loadYoutubeStatus();
-        } else {
-          var map = { invalid_format:"الصيغة غير صحيحة — الصق JSON كما هو", missing_login_cookies:"الكوكيز ناقصة — تأكد من نسخ كل الكوكيز" };
-          $("ytError").textContent = map[r.data && r.data.error] || "فشل الحفظ";
-        }
-      })
-      .catch(function(){ $("ytError").textContent = "تعذر الاتصال بالخدمة"; });
-  });
-
-  $("ytClear").addEventListener("click", function(){
-    api("/admin/cookies/api/youtube-cookies", { method:"DELETE" })
-      .then(function(r){
-        if (r.status === 200){ toast("تم حذف الكوكيز", "ok"); loadYoutubeStatus(); }
-      })
-      .catch(function(){});
-  });
-
   function showDash(){
     $("loginView").classList.add("hidden");
     $("dashView").classList.remove("hidden");
     load();
     loadSettings();
-    loadYoutubeStatus();
   }
 
   $("loginForm").addEventListener("submit", function(e){
